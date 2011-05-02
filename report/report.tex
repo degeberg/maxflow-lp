@@ -53,8 +53,59 @@ Daniel Egeberg\\
 \maketitle
 
 \begin{abstract}
-
 \end{abstract}
+
+\section{Part 1}
+We assume that the vertex capacities are not used in part 1, as they are only
+introduced in part 2.
+
+\subsection{1.1}
+\begin{itemize}
+\item It is undirected
+\item Several sources and sinks
+\end{itemize}
+
+\subsection{1.2}
+\begin{itemize}
+\item Introduce a super-source $s$ and edges $(s, v), v = 1..6$. Let
+    $c(s,v) = \infty$ for all of these.
+
+    Also introduce a super-sink $t$ and edges $(v, t), v = 26..29$. Let
+    $c(v, t) = \infty$
+\item For each edge $(u,v)$ in the graph, introduce a new vertex $v'$ and two
+    new edge $(v, v')$ and $(v', u)$. Let $c(v, v') = c(v', u) = c(u, v)$.
+    Also make $(u,v)$ directed.
+\end{itemize}
+
+\subsection{1.3}
+
+\subsection{1.4}
+
+
+
+\section{Part 2}
+\subsection{2.1}
+For each vertex $v$, split it into two vertices $v_{\text{in}}$ and
+$v_{\text{out}}$. Replace each edge $(u, v)$ with $(u, v_{\text{in}})$
+and each edge $(v, u)$ with $(v_{\text{out}}, u)$. Introduce a new edge
+$(v_{\text{in}}, v_{\text{out}})$ with capacity equal to the capacity of
+the intersection.
+
+\subsection{2.2}
+Introduce new constraints that the sum of in-edges must be less than or equal
+to the vertex capacities. Note that this also includes the original sources and
+sinks, as we have introduces super-source and super-sink.
+
+\subsection{2.3}
+Changing the graph will mean that normal max-flow algorithms apply.
+
+Changing the LP problem is easy and a good LP library will do most of the
+work for you.
+
+\subsection{2.4}
+
+\section{Part 3}
+
 
 % That's all folks!
 \end{document}
