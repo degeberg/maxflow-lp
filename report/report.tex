@@ -82,9 +82,16 @@ $c(v,t)=\infty$ for all $t \in T$.
 
 \subsection*{Question 1.3}
 
+The maximum number of cars that can enter the city per minute is 240 as seen
+by running \verb+part1.py+.
+
 \subsection*{Question 1.4}
 
-
+Intuitively, one would imagine that increasing the value of any edge in the
+minimum cut would increase the flow value. This is, however, not true. For
+instance, increasing the value of $(22, 27)$ does not affect the maximum flow
+value. The edges that give an immediate effect are $(21, 26)$, $(7, 28)$,
+$(20, 27)$, $(23, 29)$ and $(24, 29)$.
 
 \section{Part 2}
 \subsection*{Question 2.1}
@@ -93,6 +100,9 @@ $v_{\text{out}}$. Replace each edge $(u, v)$ with $(u, v_{\text{in}})$
 and each edge $(v, u)$ with $(v_{\text{out}}, u)$. Introduce a new edge
 $(v_{\text{in}}, v_{\text{out}})$ with capacity equal to the capacity of
 the intersection.
+
+Additionally, we set all the $s_{\text{out}}$ as the new sources. Similarly
+for the sinks.
 
 \subsection*{Question 2.2}
 Introduce new constraints that the sum of in-edges must be less than or equal
@@ -107,7 +117,84 @@ work for you.
 
 \subsection*{Question 2.4}
 
+Introducing these new constraints lowers the maximum flow to 210 as seen by
+running \verb+part2.py+.
+
 \section{Part 3}
+
+\subsection*{Question 3.1}
+
+
+Keeping the same definition of capacity contraint, flow conservation and
+flow value, we introduce a new constraint: \textit{vertex capacity constraint}:
+
+\[
+\sum_{v\in V} f(u, v) \le c(u) \ge \sum_{v\in V} f(v, u)
+\] where $c(v)$ is the vertex capacity of $v$. This has to hold for all $u\in V$.
+
+\subsection*{Question 3.2}
+
+We define the flow $f' : V \times V \to \mathbb{R}$ as:
+\begin{align}
+    \label{eq1} f'(u_{\text{out}}, v_{\text{in}}) &= f(u,v) \\
+    \label{eq2} f'(v_{\text{in}}, v_{\text{out}}) &= \sum_{u\in V} f(u, v) \\
+    \label{eq3} f'(u,v) &= 0 \qquad\qquad\text{otherwise.}
+\end{align}
+
+\subsection*{Question 3.3}
+
+\begin{align}
+    \label{eq4} \sum_{v\in V} f(v,u) &= \sum_{v_{\text{out}} \in V'} f(v_{\text{out}}, u_{\text{in}}) \\
+    \label{eq5} &= \sum_{v \in V'} f'(v, u_{\text{in}}) \\
+    \label{eq6} &= \sum_{v \in V'} f'(u_{\text{in}}, u_{\text{out}}) \\
+    \label{eq7} &= \sum_{v \in V'} f'(u_{\text{in}}, v)
+\end{align}
+
+\autoref{eq4} follows from the definition in \autoref{eq1}. \autoref{eq5}
+follows from \autoref{eq3}. \autoref{eq6} follows from \autoref{eq2}.
+\autoref{eq7} follows from \autoref{eq3}.
+
+\begin{equation}
+    \label{eq8} f(u,v) \leq c(u,v) \Rightarrow f'(u_{\text{out}}, v_{\text{in}}) \leq c'(v_{\text{out}}, v_{\text{in}})
+\end{equation}
+
+\autoref{eq8} follows from \autoref{eq1} and the definition of capacity in $G'$.
+
+\begin{align}
+    \label{eq9} f'(v_{\text{in}}, v_{\text{out}}) &= \sum_{u\in V} f(u, v) \\
+    \label{eq10}    &\leq c(v) \\
+    \label{eq11}    &= c'(v_{\text{in}}, v_{\text{out}})
+\end{align}
+
+\autoref{eq9} follows from \autoref{eq2}. \autoref{eq10} follows from the new
+vertex capacity constraint. \autoref{eq11} follows from the definition of
+capacity in $G'$.
+
+\subsection*{Question 3.4}
+
+\begin{equation}
+    |f| = \sum_{v \in V} f(s,v) - \sum_{v \in V} f(v,s)
+\end{equation}
+
+\begin{equation}
+    |f'| = \sum_{v \in V'} f'(s_{\text{out}},v) - \sum_{v \in V'} f'(v,s_{\text{out}})
+\end{equation}
+
+\begin{align}
+    \label{eq14} \sum_{v \in V} f(s, v) &= \sum_{v_{\text{in}} \in V'} f'(s_{\text{out}}, v_{\text{in}}) \\
+    \label{eq15}    &= \sum_{v \in V'} f'(s_{\text{out}}, v)
+\end{align}
+
+\autoref{eq14} follows from \autoref{eq1}. \autoref{eq15} follows from \autoref{eq3}.
+
+\begin{align}
+    \label{eq16} \sum_{v \in V} f(v, s) &= \sum_{v_{\text{out}} \in V'} f'(v_{\text{out}}, s_{\text{in}}) \\
+    \label{eq17}    &= f'(s_{\text{in}}, s_{\text{out}}) \\
+    \label{eq18}    &= \sum_{v \in V'} f'(v, s_{\text{out}})
+\end{align}
+
+\autoref{eq16} follows from \autoref{eq1}. \autoref{eq17} follows from flow
+conservation. \autoref{eq18} follows from \autoref{eq3}.
 
 
 % That's all folks!
