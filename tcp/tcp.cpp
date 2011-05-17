@@ -166,9 +166,6 @@ private:
         params.msg_lev = GLP_MSG_ERR;
         glp_simplex(pLP, &params);
         double dRet = glp_get_obj_val(pLP);
-        for (int i = 1; i <= (m_cNodes * (m_cNodes - 1))/2; ++i)
-            printf("%d: %.2lf\n", glp_get_col_prim(pLP, i));
-        printf("\n");
         glp_delete_prob(pLP);
         return dRet;
     }
