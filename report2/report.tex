@@ -1,0 +1,113 @@
+% This is "sig-alternate.tex" V1.9 April 2009
+% This file should be compiled with V2.4 of "sig-alternate.cls" April 2009
+%
+% This has been modified for use in the Principles of Computer System Design @
+% DIKU, 2010/2011
+\documentclass{sig-alternate}
+%
+% This gets rid of the copyright box which is not needed for PCSD assignments
+%
+\makeatletter
+\def\@copyrightspace{}
+\makeatother
+%
+% For our purposes page numbers are not so bad
+%
+\pagenumbering{arabic}
+
+%
+% Useful packages
+%
+\usepackage{url}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+%\usepackage[british]{babel}
+\usepackage{hyperref}
+%\usepackage{graphicx} % uncomment if you are using graphics
+
+\usepackage{setspace}
+
+\newcommand{\mono}[1]{{\ttfamily#1}}
+
+\begin{document}
+
+\title{Advanced Algorithms - Project 2}
+
+\numberofauthors{2} % This is individual work right???
+
+\author{
+% The command \alignauthor (no curly braces needed) should
+% precede each author name, affiliation/snail-mail address and
+% e-mail address. Additionally, tag each line of
+% affiliation/address with \affaddr, and tag the
+% e-mail address with \email.
+\alignauthor
+Søren Dahlgaard\\
+       %\affaddr{You don't have to put an address, though you could...}\\
+       \email{soerend@diku.dk}
+\alignauthor
+Daniel Egeberg\\
+       \email{egeberg@diku.dk}
+}
+
+\maketitle
+
+\section*{Part 1}
+\subsection*{Question 1.1}
+
+Given a graph $G=(V,E)$ and a number $d \in \mathbb{R}^+$, find a shortest
+tour of all subsets $V'\subseteq V$ such that
+
+\begin{equation}
+    \label{eqn:tcp}
+    \forall v \in V : \exists v' \in V' : \text{dist}(v,v') \leq d.
+\end{equation}
+
+The related decision problem is that given a graph $G=(V,E)$ and a number $d
+\in \mathbb{R}^+$, does a tour exist such that \autoref{eqn:tcp} is satisfied
+and is at most length $k$?
+
+The corresponding language, $TCP$, is defined as follows:
+
+\begin{align*}
+    TCP = \{\langle G, d, k \rangle\} :& G = (V,E) \text{ is a complete graph,} \\
+        & d \in \mathbb{R}^+, \\
+        & k \in \mathbb{R} \text{ , $G$ has a TCP tour with cost at} \\
+        & \qquad \text{most $k$.}
+\end{align*}
+
+\subsection*{Question 1.2}
+
+Set $d=1.5$ with the following vertices in the plane: \[ V=((1,0),(0,1),(1,1),(2,1),(1,2)) \]
+
+\subsection*{Question 1.3}
+
+\begin{equation}
+    \text{minimize } \sum_{i=0}^{n}\sum_{j=0}^{i} d_{ij}x{ij}
+\end{equation}
+
+\begin{equation}
+    \sum_{k \in v(i)} y_k \geq 1
+\end{equation}
+
+\begin{equation}
+    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} \in \{0,2\}
+\end{equation}
+
+\begin{equation}
+    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} - y_i \in \{0,1\}
+\end{equation}
+
+\begin{equation}
+    \sum_{i,j \in S} x_{ij} - \sum_{i \in S} y_i \qquad \text{for } \emptyset \subset S \subset V
+\end{equation}
+
+\subsection*{Question 1.4}
+
+\section*{Part 2}
+\subsection*{Question 2.1}
+\subsection*{Question 2.2}
+\subsection*{Question 2.3}
+
+% That's all folks!
+\end{document}
