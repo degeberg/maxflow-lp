@@ -76,6 +76,11 @@ The corresponding language, $TCP$, is defined as follows:
         & \qquad \text{most $k$.}
 \end{align*}
 
+
+
+
+Set $d=0, k=0$ and use the proof on page 1097 in CLRS.
+
 \subsection*{Question 1.2}
 
 Set $d=1.5$ with the following vertices in the plane: \[ V=((1,0),(0,1),(1,1),(2,1),(1,2)) \]
@@ -86,27 +91,66 @@ Set $d=1.5$ with the following vertices in the plane: \[ V=((1,0),(0,1),(1,1),(2
     \text{minimize } \sum_{i=0}^{n}\sum_{j=0}^{i} d_{ij}x{ij}
 \end{equation}
 
+subject to:
+
 \begin{equation}
     \sum_{k \in v(i)} y_k \geq 1
 \end{equation}
 
 \begin{equation}
-    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} \in \{0,2\}
+    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} \in \{0,2\} \qquad \text{for } i \in \{1,2,\ldots,n\}
 \end{equation}
 
 \begin{equation}
-    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} - y_i \in \{0,1\}
+    \label{eqn:vertexdegree}
+    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} - y_i \in \{0,1\} \qquad \text{for } i \in \{1,2,\ldots,n\}
 \end{equation}
 
 \begin{equation}
+    \label{eqn:nosubtour}
     \sum_{i,j \in S} x_{ij} - \sum_{i \in S} y_i \qquad \text{for } \emptyset \subset S \subset V
+\end{equation}
+
+\begin{equation}
+    x_{ij} \in \{0,1\} \qquad\text{for } (i,j) \in E
+\end{equation}
+
+\begin{equation}
+    y_{i} \in \{0,1\} \qquad\text{for } i \in V
 \end{equation}
 
 \subsection*{Question 1.4}
 
+Removing \autoref{eqn:nosubtour} gives a lower bound for TCP.
+
 \section*{Part 2}
 \subsection*{Question 2.1}
+
+We removed \autoref{eqn:nosubtour} because it has exponential size. We
+also removed \autoref{eqn:vertexdegree} because they only are used for
+\autoref{eqn:nosubtour}. Additionally, we have relaxed all the integer parts
+to be upper and lower bounds, e.g. $\{0,2\}$ becomes the interval $[0,2]$.
+
 \subsection*{Question 2.2}
+
+Graph 1:
+
+Length: 5.013630
+Tour: 8 > 7 > 6 > 5 > 8
+Eval: 44 vertices
+
+Graph 2:
+
+Length: 4.0
+Tour: 3,2,4,5,3
+Eval: 19 vertices
+
+Graph 3:
+
+Length: 8.0
+Tour: 0,1,3,5,7,6,4,2,0
+Eval: 9 vertices
+
 \subsection*{Question 2.3}
 
 % That's all folks!
