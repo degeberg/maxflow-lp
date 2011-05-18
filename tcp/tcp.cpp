@@ -27,7 +27,7 @@ bool operator<(const node& lhs, const node& rhs)
     // We want min. heap behaviour!
     double diff = lhs.bound - rhs.bound;
     if (diff <= epsilon && diff >= -epsilon)
-        return lhs.tour.size() < rhs.tour.size();
+        return lhs.visited.size() < rhs.visited.size();
     return diff > 0.0;
 }
 
@@ -38,6 +38,7 @@ public:
     TCPTour(const vector<pair<double, double> > &nodes, double dist)
         : m_dist(dist), m_best(infty)
     {
+        // Store information about the problem
         m_cNodes = nodes.size();
         m_nodes  = nodes;
         printf("Stored %d vertices\n", m_nodes.size());
@@ -45,10 +46,12 @@ public:
         // Initialize nearby vertices
         for (int i = 0; i < m_cNodes; ++i)
         {
-            for (int j = 0; j <= i; ++j)
+            m_distances[i][i] = 0.0;
+            m_nearby[i].push_back(i);
+            for (int j = 0; j < i; ++j)
             {
-                // No need to calculate this more than once
                 m_distances[i][j] = m_distances[j][i] = getDist(i,j);
+                // No need to calculate this more than once
                 if (m_distances[i][j] <= m_dist + epsilon)
                 {
                     m_nearby[i].push_back(j);
@@ -85,16 +88,21 @@ public:
 
 private:
     // List of all the vertices. Note that all vertices are connected
+    // so we don't need an adjacency list/matrix
     vector<pair<double, double> > m_nodes;
     // m_nearby[i] is all vertices at most m_dist distance away from vertex i
     vector<int> m_nearby[MAX_VERTICES];
     // Distance to view a monument
-    double      m_dist;
-    double      m_best;
-    vector<int> m_bestTour;
-    int         m_cCheck;
-    int         m_cNodes;
+    double      m_dist;     // d
+    double      m_best;     // Length of the best tour
+    vector<int> m_bestTour; // best tour
+    int         m_cCheck;   // Nodes evaluated
+    int         m_cNodes;   // n
+    // m_distances[i][j] = getDist(i,j) = The euclidian distance between
+    // nodes i and j.
     double      m_distances[MAX_VERTICES][MAX_VERTICES];
+    // A huge array of just 1.0's. Just so we don't have to create it each
+    // time we create a linear problem.
     double      m_coef[MAX_VERTICES * MAX_VERTICES];
 
     double getDist(int i, int j)
@@ -111,7 +119,7 @@ private:
     {
         glp_prob *pLP = glp_create_prob();
         glp_set_obj_dir(pLP, GLP_MIN);
-        // There is n*(n-1) / 2 pair (i,j), i > j
+        // There is n*(n-1) / 2 pairs (i,j), i > j. These are the variables
         glp_add_cols(pLP, (m_cNodes * (m_cNodes - 1))/2);
         for (int i = 0; i < m_cNodes; ++i)
         {
@@ -146,7 +154,12 @@ private:
         }
         for (int i = 0; i < m_cNodes; ++i)
         {
-            // Add vicinity constraints for each node
+            // Add vicinity constraints for each node. We do this another
+            // way than in the ILP because we don't have vertex variables.
+            // Instead we say the nearby vertices must total have 2 edges
+            // incident.
+            // We have already calculated all the indices for these vertices,
+            // so we just filter duplicates and store them in a bigger array.
             int    x = glp_add_rows(pLP, 1);
             set<int> s;
             for (int j = 0; j < m_nearby[i].size(); ++j)
@@ -161,6 +174,7 @@ private:
             glp_set_mat_row(pLP, x, s.size(), ind2, m_coef);
             glp_set_row_bnds(pLP, x, GLP_LO, 2.0, 2.0);
         }
+        // We don't want all the output from glpk.
         glp_smcp params;
         glp_init_smcp(&params);
         params.msg_lev = GLP_MSG_ERR;
@@ -192,21 +206,25 @@ private:
             n.bound = getBound(n);
             pq.push(n);
         }
+        // Run the algorithm with the initial nodes in the pq.
         printf("Created initial nodes.\n");
         fflush(stdout);
         while (!pq.empty())
         {
             node n = pq.top();
             pq.pop();
+            // Status info :)
             printf("b: %.3lf, l: %.3lf, n: %d, v: %d - best: %.3lf\n",
                     n.bound, n.length, n.tour.size(), n.visited.size(),
                     m_best);
             ++m_cCheck;
             if (n.bound > m_best - epsilon)
                 // If this bound is worse than the best, all the rest will be
+                // A node will never have a better lower bound than its parent
                 break;
-            for (int i = 0; i < m_nodes.size(); ++i)
+            for (int i = 0; i < m_cNodes; ++i)
             {
+                // Is this node in the tour?
                 bool found = false;
                 for (vector<int>::const_iterator it = n.tour.begin();
                         it != n.tour.end(); ++it)
@@ -214,6 +232,7 @@ private:
                         found = true;
                 if (!found)
                 {
+                    // It wasn't. Create the child node
                     node child;
                     child.tour    = n.tour;
                     child.tour.push_back(i);
@@ -224,13 +243,14 @@ private:
                         child.visited.insert(*it);
                     if (child.visited.size() == m_cNodes)
                     {
-                        // Full tour
+                        // Full tour. Evaluating this here rather than later
+                        // can save us a small amount of space and time.
                         double length = child.length +
                             m_distances[child.tour.front()][i];
                         if (length < m_best)
                         {
                             m_best     = length;
-                            m_bestTour = n.tour;
+                            m_bestTour = child.tour;
                         }
                         continue;
                     }
@@ -245,10 +265,10 @@ private:
 };
 // }}}
 
-int main()
+int main(int argc, char **argv)
 {
     vector<pair<double, double> > nodes;
-    FILE *pIn = fopen("FlorenceGraph.txt", "r");
+    FILE *pIn = fopen(argv[1], "r");
     int n;
     double d;
     fscanf(pIn, "%d %lf", &n, &d);

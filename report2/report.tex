@@ -26,6 +26,7 @@
 %\usepackage{graphicx} % uncomment if you are using graphics
 
 \usepackage{setspace}
+\usepackage{tikz}
 
 \newcommand{\mono}[1]{{\ttfamily#1}}
 
@@ -53,7 +54,7 @@ Daniel Egeberg\\
 \maketitle
 
 \section*{Part 1}
-\subsection*{Question 1.1}
+\subsection*{Question 1.1.a}
 
 Given a graph $G=(V,E)$ and a number $d \in \mathbb{R}^+$, find a shortest
 tour of all subsets $V'\subseteq V$ such that
@@ -64,8 +65,8 @@ tour of all subsets $V'\subseteq V$ such that
 \end{equation}
 
 The related decision problem is that given a graph $G=(V,E)$ and a number $d
-\in \mathbb{R}^+$, does a tour exist such that \autoref{eqn:tcp} is satisfied
-and is at most length $k$?
+\in \mathbb{R}^+$, does a tour exist of at most length $k$ such that
+\autoref{eqn:tcp} is satisfied.
 
 The corresponding language, $TCP$, is defined as follows:
 
@@ -77,81 +78,129 @@ The corresponding language, $TCP$, is defined as follows:
 \end{align*}
 
 
+\subsection*{Question 1.1.b}
+To transform any hamilton cycle problem into a TCP problem do the following
+steps:
 
-
-Set $d=0, k=0$ and use the proof on page 1097 in CLRS.
+\begin{itemize}
+\item Transform the problem into an instance of $TSP = \{G', c, 0\}$ using
+    the algorithm in CLRS, p. 1097.
+\item Transform the TSP instance into an instance of TCP by setting $d = 0$.
+\end{itemize}
 
 \subsection*{Question 1.2}
+See \autoref{fig:tcp}. In this case the optimal tour has length $0$ ($a$ =>
+$a$), but a 1-tree obviously has much bigger length.
 
-Set $d=1.5$ with the following vertices in the plane: \[ V=((1,0),(0,1),(1,1),(2,1),(1,2)) \]
+\tikzstyle{vertex}=[circle,fill=black!25,minimum size=20pt,inner sep=0pt]
+\begin{figure}
+\begin{center}
+\begin{tikzpicture}
+    \fill[fill=blue!10!green!10!,draw=blue,dotted,thick] (0,0) circle (2);
+    \node[vertex] (a) at (0,0) {$a$};
+    \node[vertex] (b) at (0,1) {$b$};
+    \node[vertex] (c) at (1,0) {$c$};
+    \node[vertex] (d) at (-1,0) {$d$};
+    \node[vertex] (e) at (0,-1) {$e$};
+\end{tikzpicture}
+\end{center}
+\caption{Example of a graph where the smallest 1-tree is worse than the
+    optimal TCP tour}
+\label{fig:tcp}
+\end{figure}
 
 \subsection*{Question 1.3}
+Inspired by the ILP for the traveling salesman problem we use a decision
+variable for each edge. Additionally we use a decision variable for each
+vertex. Doing this we want to minimize the length of the edges in the path,
+ie:
 
 \begin{equation}
     \text{minimize } \sum_{i=0}^{n}\sum_{j=0}^{i} d_{ij}x{ij}
 \end{equation}
 
-subject to:
+In order to specify the constraints we introduce a notation: Let $v(S) =
+\{v\in V : \exists a\in S, d_{av} \le d\}$.
+Using this notation we get the following constraints:
 
 \begin{equation}
+    \label{eqn:vicinity}
     \sum_{k \in v(i)} y_k \geq 1
 \end{equation}
 
 \begin{equation}
-    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} \in \{0,2\} \qquad \text{for } i \in \{1,2,\ldots,n\}
+    \label{eqn:degree}
+    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} \in \{0,2\}
+    \qquad i \in \{1,2,\ldots,n\}
 \end{equation}
 
 \begin{equation}
-    \label{eqn:vertexdegree}
-    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} - y_i \in \{0,1\} \qquad \text{for } i \in \{1,2,\ldots,n\}
+    \label{eqn:vinpath}
+    \sum_{j=0}^{i-1} x_{ij} + \sum_{j=i+1}^{n} x_{ji} - y_i \in \{0,1\}
+    \qquad i \in \{1,2,\ldots,n\}
 \end{equation}
 
 \begin{equation}
-    \label{eqn:nosubtour}
-    \sum_{i,j \in S} x_{ij} - \sum_{i \in S} y_i \qquad \text{for } \emptyset \subset S \subset V
+    \label{eqn:subtour}
+    \sum_{i,j \in S, i > j} x_{ij} - \sum_{i \in S} y_i \le 1
+    \qquad S\subset V, v(S) \ne V, v(V\setminus S) \ne V
 \end{equation}
 
 \begin{equation}
-    x_{ij} \in \{0,1\} \qquad\text{for } (i,j) \in E
+    x_{ij} \in \{0,1\}
+    \qquad (i,j) \in E
 \end{equation}
 
 \begin{equation}
-    y_{i} \in \{0,1\} \qquad\text{for } i \in V
+    y_{i} \in \{0,1\}
+    \qquad i \in V
 \end{equation}
+
+Where (\ref{eqn:vicinity}) makes sure that each node can be seen from the path.
+(\ref{eqn:degree}) makes sure that each node has exactly $2$ or $0$ incident
+edges in the path. (\ref{eqn:vinpath}) specifies that nodes with $2$ incident
+edges are included in the path and other nodes aren't.
+
+(\ref{eqn:subtour}) is a modified version of the subtour constraint. Because
+we allow exactly $1$ subtour that doesn't include all vertices of the graph
+we cannot use the constraint from the TSP formulation. Instead we look at
+all partitions of the graph $(S, V\setminus S)$ such that neither set has
+vision of all monuments ($v(S)\ne V, v(V\setminus S0\ne V$). For all of these
+partitions we must have an edge crossing the cut. We can formulate this, as
+the amount of edges in $S$ must be less that the amount of nodes (included in
+the path).
 
 \subsection*{Question 1.4}
-
-Removing \autoref{eqn:nosubtour} gives a lower bound for TCP.
+The biggest problem with the ILP formulation is that the amount of constraints
+is exponential in the input size. Removing \autoref{eqn:subtour} gives a lower
+bound for the TCP with a polynomial amount of constraints..
 
 \section*{Part 2}
 \subsection*{Question 2.1}
 
-We removed \autoref{eqn:nosubtour} because it has exponential size. We
-also removed \autoref{eqn:vertexdegree} because they only are used for
-\autoref{eqn:nosubtour}. Additionally, we have relaxed all the integer parts
-to be upper and lower bounds, e.g. $\{0,2\}$ becomes the interval $[0,2]$.
+We've alreadydecided to remove \autoref{eqn:subtour} to get a problem of
+polynomial size. This leaves all the variables $y_i$ useless, so we can
+remove \autoref{eqn:vinpath} as well and the $y_i$ variables in general.
+
+This leaves us with a nice set of constraints, however the integer constraints
+make it a much harder problem. We therefore relax all constraints
+$k\in \{a, b\}$ and replace them with $a\le k \le b$.
 
 \subsection*{Question 2.2}
-
-Graph 1:
-
-Length: 5.013630
-Tour: 8 > 7 > 6 > 5 > 8
-Eval: 44 vertices
-
-Graph 2:
-
-Length: 4.0
-Tour: 3,2,4,5,3
-Eval: 19 vertices
-
-Graph 3:
-
-Length: 8.0
-Tour: 0,1,3,5,7,6,4,2,0
-Eval: 9 vertices
-
-\subsection*{Question 2.3}
+We implemented this in C++ rather than using the supplied Java code. Our
+definition of when a node is ``evaluated'' might therefore be different. We say
+that a node is evaluated when it is removed from the priority queue that makes
+up the best-first search.
+\\\\
+\begin{tabular}{| l | l | l | r |}
+\hline
+\textbf{Graph} & \textbf{\# eval} & \textbf{Tour} & \textbf{Length} \\
+\hline
+1              & 44              & 6, 8, 7, 5, 6 & $5.013630$      \\
+2              & 4               & 2, 3, 5, 4, 2 & $4.000000$      \\
+3              & 9               & 0, 1, 3, 5, 7, 6, 4, 2, 0 & $8.000000$ \\
+\hline
+\end{tabular}
 
 % That's all folks!
 \end{document}
