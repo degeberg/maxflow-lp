@@ -59,9 +59,20 @@ public:
                 }
             }
         }
+        // Find potential start vertex if we can define one.
+        m_start = -1;
+        for (int i = 0; i < m_cNodes; ++i)
+            if (m_nearby[i].size() == 1)
+                m_start = i;
         // Used by lp solver.
         for (int i = 0; i < m_cNodes * m_cNodes; ++i)
+        {
             m_coef[i] = 1.0;
+            if (i <= m_cNodes - 1 || i > 3 * m_cNodes - 3)
+                m_coef2[i] = 1.0;
+            else
+                m_coef2[i] = -1.0;
+        }
         printf("Done initializing\n");
         fflush(stdout);
     }
@@ -86,6 +97,23 @@ public:
         return m_cCheck;
     }
 
+    /* Used to create data for tcp.mod */
+    void printDistances()
+    {
+        for (int i = 0; i < m_cNodes; ++i)
+        {
+            for (int j = 0; j < m_cNodes; ++j)
+            {
+                int a = i == m_start ? 0 : i == 0 ? m_start : i;
+                int b = j == m_start ? 0 : j == 0 ? m_start : j;
+                if (i == j)
+                    printf("%d\t%d\t%d\n", a + 1, a + 1, 1000000);
+                else
+                    printf("%d\t%d\t%d\n", a + 1, b + 1, (int)(m_distances[i][j] * 1000));
+            }
+        }
+    }
+
 private:
     // List of all the vertices. Note that all vertices are connected
     // so we don't need an adjacency list/matrix
@@ -104,6 +132,11 @@ private:
     // A huge array of just 1.0's. Just so we don't have to create it each
     // time we create a linear problem.
     double      m_coef[MAX_VERTICES * MAX_VERTICES];
+    double      m_coef2[MAX_VERTICES * MAX_VERTICES];
+    // If any vertex has only itself as nearby monuments it MUST be in the
+    // path. m_start is this vertex, as we can pick it as the start of the
+    // path. If m_start == -1 no vertex is by itself.
+    int         m_start;
 
     double getDist(int i, int j)
     {
@@ -114,7 +147,151 @@ private:
         return dist;
     }
 
+    // {{{ getBound_err
+    // This method was slow and produced some weird output.
+    // It tries to add the subtour constraint to the bound as well.
+    double getBound_err(const node& n)
+    {
+        glp_prob *pLP = glp_create_prob();
+        glp_set_obj_dir(pLP, GLP_MIN);
+        // There is n*(n-1) / 2 pairs (i,j), i > j. These are the variables
+        int pairs = m_cNodes * m_cNodes;
+#define v(i, j) (i * m_cNodes + j)
+        glp_add_cols(pLP, pairs);
+        for (int i = 0; i < m_cNodes; ++i)
+        {
+            // Decision variables. Relaxed to 0 <= x_ij <= 1
+            for (int j = 0; j < m_cNodes; ++j)
+            {
+                glp_set_obj_coef(pLP, v(i,j) + 1, m_distances[i][j]);
+                glp_set_col_bnds(pLP, v(i,j) + 1, GLP_DB, 0.0, 1.0);
+            }
+        }
+        // Edges already in the tour _must_ be included.
+        for (int i = 1; i < n.tour.size(); ++i)
+            glp_set_col_bnds(pLP, v(n.tour[i-1], n.tour[i]) + 1, GLP_FX, 1.0, 1.0);
+
+        int ind[m_cNodes][m_cNodes * 2 + 1];
+        glp_add_rows(pLP, m_cNodes * 2);
+        for (int i = 0; i < m_cNodes; ++i)
+        {
+            // All nodes should have exactly 0 or 2 edges incident. Relaxed
+            // to 0 <= deg <= 2
+            bool inPath = false;
+            for (vector<int>::const_iterator it = n.tour.begin();
+                    it != n.tour.end(); ++it)
+                if (*it  == i)
+                    inPath = true;
+            if (inPath)
+                glp_set_row_bnds(pLP, 2*i+1, GLP_FX, 2.0, 2.0);
+            else
+                glp_set_row_bnds(pLP, 2*i+1, GLP_DB, 0.0, 2.0);
+            glp_set_row_bnds(pLP, 2*i+2, GLP_FX, 0.0, 0.0);
+
+            for (int j = 0; j < i; ++j)
+            {
+                ind[i][j+1]          = v(i,j) + 1;
+                ind[i][j + m_cNodes] = v(j,i) + 1;
+            }
+            for (int j = i+1; j < m_cNodes; ++j)
+            {
+                ind[i][j]                = v(i,j) + 1;
+                ind[i][j + m_cNodes - 1] = v(j,i) + 1;
+            }
+            glp_set_mat_row(pLP, 2*i + 1, 2*m_cNodes - 2, ind[i], m_coef);
+            glp_set_mat_row(pLP, 2*i + 2, 2*m_cNodes - 2, ind[i], m_coef2);
+        }
+        for (int i = 0; i < m_cNodes; ++i)
+        {
+            // Add vicinity constraints for each node. We do this another
+            // way than in the ILP because we don't have vertex variables.
+            // Instead we say the nearby vertices must total have 2 edges
+            // incident.
+            // We have already calculated all the indices for these vertices,
+            // so we just filter duplicates and store them in a bigger array.
+            int    x = glp_add_rows(pLP, 1);
+            set<int> s;
+            for (int j = 0; j < m_nearby[i].size(); ++j)
+                for (int k = 1; k < 2 * m_cNodes - 1; ++k)
+                    s.insert(ind[m_nearby[i][j]][k]);
+            int    ind2[s.size() + 1];
+            int j = 1;
+            for (set<int>::const_iterator it = s.begin();
+                    it != s.end();
+                    ++it, ++j)
+                ind2[j] = *it;
+            glp_set_mat_row(pLP, x, s.size(), ind2, m_coef);
+            glp_set_row_bnds(pLP, x, GLP_LO, 2.0, 2.0);
+        }
+        // Subtour constraint. this should be polynomial in size.
+        if (m_start != -1)
+        {
+            int k = glp_add_cols(pLP, pairs);
+            for (int i = 0; i < m_cNodes; ++i)
+            {
+                for (int j = 0; j < m_cNodes; ++j)
+                {
+                    int y = v(i,j);
+                    glp_set_col_bnds(pLP, k + y, GLP_LO, 0.0, 0.0);
+                    int x = glp_add_rows(pLP, 1);
+                    glp_set_row_bnds(pLP, x, GLP_UP, 0.0, 0.0);
+                    int ind2[]  = {0, k + y, y + 1};
+                    double coef2[] = {0, 1.0, (double)(-m_cNodes + 1)};
+                    glp_set_mat_row(pLP, x, 2, ind2, coef2);
+                }
+            }
+            int x = glp_add_rows(pLP, m_cNodes);
+            int ind2[MAX_VERTICES * MAX_VERTICES + 3 * MAX_VERTICES];
+            for (int i = 0; i < m_cNodes; ++i)
+            {
+                glp_set_row_bnds(pLP, x + i, GLP_FX, 0.0, 0.0);
+                for (int j = 0; j < i; ++j)
+                {
+                    ind2[j + 1]   = k + v(j,i);
+                    ind2[j + m_cNodes] = k + v(i,j);
+                    ind2[j + 2*m_cNodes - 1] = v(i,j) + 1;
+                }
+                for (int j = i+1; j < m_cNodes; ++j)
+                {
+                    ind2[j]   = k + v(j,i);
+                    ind2[j + m_cNodes - 1] = k + v(i,j);
+                    ind2[j + 2*m_cNodes - 2] = v(i,j) + 1;
+                }
+                if (i != m_start)
+                    glp_set_mat_row(pLP, x + i, 3 * m_cNodes - 3, ind2, m_coef2);
+                else
+                {
+                    int m = 3 * m_cNodes - 3 + 1;
+                    for (int j = 0; j < m_cNodes; ++j)
+                    {
+                        for (int l = 0; l < m_cNodes; ++l)
+                        {
+                            if (j == i || l == i)
+                                continue;
+                            ind2[m++] = v(j,l) + 1;
+                        }
+                    }
+
+                    glp_set_mat_row(pLP, x + i, m - 3 * m_cNodes + 3,
+                            ind2, m_coef2);
+                    glp_set_row_bnds(pLP, x + i, GLP_FX, 1.0, 1.0);
+                }
+            }
+        }
+#undef v
+        // We don't want all the output from glpk.
+        glp_smcp params;
+        glp_init_smcp(&params);
+        params.msg_lev = GLP_MSG_ERR;
+        glp_simplex(pLP, &params);
+        double dRet = glp_get_obj_val(pLP);
+        glp_delete_prob(pLP);
+        return dRet;
+    }
+    // }}}
+
     // {{{ getBound
+    // Get bound using the method described in the report
     double getBound(const node& n)
     {
         glp_prob *pLP = glp_create_prob();
@@ -282,6 +459,8 @@ int main(int argc, char **argv)
 
     printf("Creating solver\n");
     TCPTour solver(nodes, d);
+
+//    solver.printDistances();
 
     printf("Running solver\n");
     solver.run();
